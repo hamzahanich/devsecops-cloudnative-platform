@@ -1,0 +1,70 @@
+# ==============================================================================
+# Dockerfile Multi-stage durci pour microservice démo DevSecOps
+# Respecte les principes de sécurité Zero-Trust :
+# 1. Image de base minimale (Distroless / Alpine minimal)
+# 2. Utilisateur non-root avec UID explicite (>1000)
+# 3. Système de fichiers prêt pour lecture seule (readOnlyRootFilesystem)
+# 4. Aucun binaire superflu (curl, bash, nmap supprimés de l'étape finale)
+# ==============================================================================
+
+# Étape 1 : Construction
+FROM golang:1.22-alpine AS builder
+
+WORKDIR /app
+
+# Copie du code source du serveur web de démo
+COPY <<EOF /app/main.go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"os"
+	"time"
+)
+
+type StatusResponse struct {
+	Status    string    `json:"status"`
+	Timestamp time.Time `json:"timestamp"`
+	UserUID   int       `json:"uid"`
+	Version   string    `json:"version"`
+}
+
+func statusHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	resp := StatusResponse{
+		Status:    "running",
+		Timestamp: time.Now(),
+		UserUID:   os.Getuid(),
+		Version:   "1.0.0",
+	}
+	json.NewEncoder(w).Encode(resp)
+}
+
+func main() {
+	http.HandleFunc("/healthz", statusHandler)
+	http.HandleFunc("/api/status", statusHandler)
+	fmt.Println("DevSecOps Secured Microservice running on :8080...")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		fmt.Printf("Error starting server: %s\n", err)
+	}
+}
+EOF
+
+# Compilation statique sans dépendances CGO
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o secured-app /app/main.go
+
+# Étape 2 : Image finale minimale et non-root
+FROM gcr.io/distroless/static-debian12:nonroot
+
+WORKDIR /app
+COPY --from=builder /app/secured-app /app/secured-app
+
+# Port non privilégié (>1024)
+EXPOSE 8080
+
+# UID 65532 est l'utilisateur standard non-root dans distroless
+USER 65532:65532
+
+ENTRYPOINT ["/app/secured-app"]

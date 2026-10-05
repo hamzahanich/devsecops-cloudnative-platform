@@ -1,0 +1,65 @@
+# ==============================================================================
+# Configuration Helm pour Prometheus & Grafana (kube-prometheus-stack)
+# ==============================================================================
+
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1024Mi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+    additionalScrapeConfigs:
+      - job_name: 'tetragon'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - kube-system
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            action: keep
+            regex: tetragon.*
+      - job_name: 'kyverno'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - kyverno
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            action: keep
+            regex: kyverno.*
+
+grafana:
+  adminPassword: "admin"
+  service:
+    type: ClusterIP
+    port: 3000
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'devsecops'
+          orgId: 1
+          folder: 'DevSecOps'
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/devsecops
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 25m
+        memory: 64Mi

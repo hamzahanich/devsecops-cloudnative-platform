@@ -1,0 +1,29 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: detect-namespace-breakout
+  annotations:
+    description: "Surveillance eBPF des tentatives de sortie de conteneur (setns, unshare, mount)"
+spec:
+  kprobes:
+    - call: "sys_enter_setns"
+      syscall: true
+      args:
+        - index: 0
+          type: "int"
+        - index: 1
+          type: "int"
+      selectors:
+        - matchActions:
+            - action: Sigkill
+            - action: Post
+    - call: "sys_enter_mount"
+      syscall: true
+      args:
+        - index: 0
+          type: "string" # source
+        - index: 1
+          type: "string" # target
+      selectors:
+        - matchActions:
+            - action: Post

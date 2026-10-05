@@ -1,0 +1,17 @@
+# Configuration durcie pour k3s
+# ==============================================================================
+write-kubeconfig-mode: "0644"
+disable:
+  - traefik
+  - servicelb
+  - local-storage
+
+# Active Pod Security Standards et audit logs si nécessaire
+kube-apiserver-arg:
+  - "anonymous-auth=false"
+  - "profiling=false"
+
+kubelet-arg:
+  - "protect-kernel-defaults=false"
+  - "read-only-port=0"
+  - "anonymous-auth=false"

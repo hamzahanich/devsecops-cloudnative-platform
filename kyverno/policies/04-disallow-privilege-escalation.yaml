@@ -1,0 +1,35 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-privilege-escalation
+  annotations:
+    policies.kyverno.io/title: "Interdiction de l'élévation de privilèges"
+    policies.kyverno.io/category: "Pod Security Standards (Restricted)"
+    policies.kyverno.io/severity: "critical"
+    policies.kyverno.io/description: >-
+      Empêche un processus enfant d'obtenir plus de privilèges que son processus parent
+      (activation du flag no_new_privs).
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: disallow-privilege-escalation
+      match:
+        any:
+        - resources:
+            kinds:
+              - Pod
+      exclude:
+        any:
+        - resources:
+            namespaces:
+              - kube-system
+              - kyverno
+              - monitoring
+      validate:
+        message: "L'élévation de privilèges est interdite ('securityContext.allowPrivilegeEscalation: false')."
+        pattern:
+          spec:
+            containers:
+              - securityContext:
+                  allowPrivilegeEscalation: false

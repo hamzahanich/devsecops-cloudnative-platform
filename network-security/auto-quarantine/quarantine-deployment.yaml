@@ -1,0 +1,75 @@
+# ==============================================================================
+# Déploiement in-cluster du Contrôleur de Quarantaine Automatique
+# ==============================================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: quarantine-controller-sa
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: quarantine-controller-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: quarantine-controller-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: quarantine-controller-role
+subjects:
+  - kind: ServiceAccount
+    name: quarantine-controller-sa
+    namespace: kube-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quarantine-controller
+  namespace: kube-system
+  labels:
+    app: quarantine-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: quarantine-controller
+  template:
+    metadata:
+      labels:
+        app: quarantine-controller
+    spec:
+      serviceAccountName: quarantine-controller-sa
+      containers:
+        - name: controller
+          image: python:3.11-alpine
+          command:
+            - /bin/sh
+            - -c
+            - |
+              apk add --no-cache curl kubectl bash
+              python3 /scripts/quarantine-controller.py
+          volumeMounts:
+            - name: script-vol
+              mountPath: /scripts
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+      volumes:
+        - name: script-vol
+          configMap:
+            name: quarantine-controller-script

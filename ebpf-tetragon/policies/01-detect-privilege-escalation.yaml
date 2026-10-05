@@ -1,0 +1,35 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: detect-privilege-escalation
+  annotations:
+    description: "Surveillance eBPF des élévations de privilèges (commit_creds, setuid, setgid)"
+spec:
+  kprobes:
+    - call: "commit_creds"
+      syscall: false
+      args:
+        - index: 0
+          type: "cred"
+      selectors:
+        - matchArgs:
+            - index: 0
+              operator: "Equal"
+              values:
+                - 0 # Root UID/GID target
+          matchActions:
+            - action: Sigkill
+            - action: Post
+    - call: "sys_setuid"
+      syscall: true
+      args:
+        - index: 0
+          type: "int"
+      selectors:
+        - matchArgs:
+            - index: 0
+              operator: "Equal"
+              values:
+                - "0" # Tentative de passer root
+          matchActions:
+            - action: Post

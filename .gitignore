@@ -1,0 +1,14 @@
+# Ignorer les clés privées et secrets
+supply-chain/keys/*.key
+*.key
+*.pem
+
+# Ignorer les rapports temporaires volumineux
+supply-chain/reports/*
+!supply-chain/reports/.gitkeep
+
+# Fichiers OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

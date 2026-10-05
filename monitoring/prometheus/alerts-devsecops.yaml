@@ -1,0 +1,58 @@
+# ==============================================================================
+# Règles d'alertes Prometheus pour DevSecOps (Tetragon eBPF, Kyverno & Quarantaine)
+# ==============================================================================
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: devsecops-security-alerts
+  namespace: monitoring
+  labels:
+    role: alert-rules
+    release: prometheus
+spec:
+  groups:
+    - name: DevSecOpsRuntimeAlerts
+      rules:
+        # Alerte 1 : Interception eBPF avec Sigkill déclenché par Tetragon
+        - alert: TetragonSigkillEnforced
+          expr: increase(tetragon_policy_filter_actions_total{action="sigkill"}[1m]) > 0
+          for: 0m
+          labels:
+            severity: critical
+            category: runtime-security
+          annotations:
+            summary: "Exécution bloquée et processus tué par le noyau via Tetragon eBPF"
+            description: "Une TracingPolicy Tetragon a intercepté un comportement interdit et a émis un SIGKILL immédiat."
+
+        # Alerte 2 : Pic d'événements suspects captés par kprobe
+        - alert: TetragonSuspiciousActivitySpike
+          expr: rate(tetragon_events_total{type="process_kprobe"}[2m]) > 10
+          for: 1m
+          labels:
+            severity: warning
+            category: runtime-security
+          annotations:
+            summary: "Augmentation anormale des événements suspects interceptés par eBPF"
+            description: "Le volume de kprobes de sécurité a dépassé le seuil habituel."
+
+        # Alerte 3 : Tentative de déploiement bloquée par Kyverno (Admission Controller)
+        - alert: KyvernoAdmissionBlocked
+          expr: increase(kyverno_admission_requests_total{resource_request_operation="CREATE", rule_result="fail"}[2m]) > 0
+          for: 0m
+          labels:
+            severity: high
+            category: admission-control
+          annotations:
+            summary: "Pod non conforme rejeté par Kyverno Zero-Trust"
+            description: "Kyverno a bloqué une tentative de création de ressource en violation d'une ClusterPolicy (root, image non signée ou writable fs)."
+
+        # Alerte 4 : Pod mis en quarantaine dynamique
+        - alert: PodDynamicallyQuarantined
+          expr: count(kube_pod_labels{label_security_status="quarantined"}) > 0
+          for: 0m
+          labels:
+            severity: critical
+            category: network-containment
+          annotations:
+            summary: "Un pod a été placé en quarantaine réseau dynamique"
+            description: "Le contrôleur de réponse automatique a détecté une intrusion et a coupé 100% des flux réseau du pod."

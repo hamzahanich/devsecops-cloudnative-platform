@@ -1,0 +1,34 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+  annotations:
+    policies.kyverno.io/title: "Interdiction des tags d'images ':latest'"
+    policies.kyverno.io/category: "Best Practices"
+    policies.kyverno.io/severity: "medium"
+    policies.kyverno.io/description: >-
+      L'utilisation du tag :latest ou l'omission de tags rend les déploiements non déterministes
+      et empêche l'audit de traçabilité des vulnérabilités.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: validate-image-tag
+      match:
+        any:
+        - resources:
+            kinds:
+              - Pod
+      exclude:
+        any:
+        - resources:
+            namespaces:
+              - kube-system
+              - kyverno
+              - monitoring
+      validate:
+        message: "L'image ne doit pas utiliser le tag ':latest' ni être sans tag spécifique."
+        pattern:
+          spec:
+            containers:
+              - image: "!*:latest & !*:"

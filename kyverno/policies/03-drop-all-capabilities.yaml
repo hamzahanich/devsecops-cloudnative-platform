@@ -1,0 +1,37 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: drop-all-capabilities
+  annotations:
+    policies.kyverno.io/title: "Suppression de toutes les capabilities Linux"
+    policies.kyverno.io/category: "Pod Security Standards (Restricted)"
+    policies.kyverno.io/severity: "high"
+    policies.kyverno.io/description: >-
+      Toutes les capacités Linux superflues (CAP_SYS_ADMIN, CAP_NET_ADMIN, etc.)
+      doivent être explicitement révoquées pour respecter le principe du moindre privilège.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: drop-all-capabilities
+      match:
+        any:
+        - resources:
+            kinds:
+              - Pod
+      exclude:
+        any:
+        - resources:
+            namespaces:
+              - kube-system
+              - kyverno
+              - monitoring
+      validate:
+        message: "Tous les conteneurs doivent révoquer l'ensemble des capacités Linux ('securityContext.capabilities.drop: [ALL]')."
+        pattern:
+          spec:
+            containers:
+              - securityContext:
+                  capabilities:
+                    drop:
+                      - ALL

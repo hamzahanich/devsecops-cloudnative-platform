@@ -1,0 +1,47 @@
+# ==============================================================================
+# Autorisation des flux légitimes minimaux : DNS, Prometheus et Ingress HTTP
+# ==============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-essential-traffic
+  namespace: secured-apps
+spec:
+  podSelector:
+    matchLabels:
+      app: secured-app
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Autorise les connexions HTTP entrantes sur le port applicatif 8080
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              role: frontend
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Autorise le scraping des métriques par Prometheus
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # Résolution DNS vers CoreDNS / Kube-DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

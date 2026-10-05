@@ -1,0 +1,20 @@
+# ==============================================================================
+# NetworkPolicy d'Isolation Stricte (Quarantaine Dynamique)
+# Dès qu'un Pod est étiqueté 'security-status: quarantined', tous ses flux
+# Ingress et Egress sont instantanément coupés à 100%.
+# ==============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dynamic-quarantine-isolate
+  namespace: secured-apps
+spec:
+  podSelector:
+    matchLabels:
+      security-status: quarantined
+  policyTypes:
+    - Ingress
+    - Egress
+  # Les sections ingress: [] et egress: [] vides coupent tous les flux sans exception
+  ingress: []
+  egress: []

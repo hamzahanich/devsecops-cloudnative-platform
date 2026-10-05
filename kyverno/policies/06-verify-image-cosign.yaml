@@ -1,0 +1,41 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-image-signature
+  annotations:
+    policies.kyverno.io/title: "Vérification cryptographique de la signature d'image (Cosign)"
+    policies.kyverno.io/category: "Software Supply Chain Security"
+    policies.kyverno.io/severity: "critical"
+    policies.kyverno.io/description: >-
+      Exige que toutes les images déployées dans les espaces de production
+      soient cryptographiquement signées par la clé publique de l'organisation via Cosign.
+spec:
+  validationFailureAction: Enforce
+  webhookTimeoutSeconds: 30
+  rules:
+    - name: verify-cosign-signature
+      match:
+        any:
+        - resources:
+            namespaces:
+              - secured-apps
+              - production
+            kinds:
+              - Pod
+      verifyImages:
+        - imageReferences:
+            - "ghcr.io/*"
+            - "docker.io/*"
+            - "localhost:5000/*"
+            - "registry.local:5000/*"
+            - "devsecops-demo/*"
+          attestors:
+            - entries:
+                - keys:
+                    # Remplacer par la clé publique générée par `supply-chain/generate-keys.sh`
+                    # ou injecter via une référence vers un secret K8s
+                    publicKeys: |-
+                      -----BEGIN PUBLIC KEY-----
+                      MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE6MMUD5I6KSpyagSH4QpJLBS9/0l3
+                      6dTHlQzPh3qXwiKgrVc+bBlLbFsESjAsvZxp30baRe7PbSjQ0Y9lkrbaYw==
+                      -----END PUBLIC KEY-----

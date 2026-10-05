@@ -1,0 +1,34 @@
+# Configuration Helm pour Cilium Tetragon (eBPF Runtime Security)
+# ==============================================================================
+
+tetragon:
+  # Activer l'exportation des métriques Prometheus
+  prometheus:
+    enabled: true
+    port: 2112
+    serviceMonitor:
+      enabled: true
+      labels:
+        release: prometheus
+
+  # Journalisation structurée en JSON pour ingestion facile SIEM / controller
+  export:
+    mode: "stdout"
+    filenames:
+      - "/var/log/tetragon/tetragon.log"
+
+  # Activation du mode BTF et des sondes kprobes/tracepoints
+  btf: ""
+  
+  # Configuration des ressources
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  # Sécurité du daemonset Tetragon
+  securityContext:
+    privileged: true

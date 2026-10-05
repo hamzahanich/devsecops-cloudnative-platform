@@ -1,0 +1,46 @@
+# Configuration Helm pour Kyverno (Zero Trust Admission Controller)
+# ==============================================================================
+
+admissionController:
+  replicas: 1
+  serviceMonitor:
+    enabled: true
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+backgroundController:
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+cleanupController:
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 64Mi
+
+reportsController:
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+# Paramétrage des métriques
+features:
+  policyReports:
+    enabled: true
